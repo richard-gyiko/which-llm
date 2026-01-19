@@ -460,12 +460,12 @@ fn arrow_value_to_string(array: &dyn Array, row: usize) -> String {
 /// Replace table name in SQL, being careful not to replace inside string literals.
 fn replace_table_name_safe(sql: &str, table_name: &str, replacement: &str) -> String {
     let mut result = String::new();
-    let mut chars = sql.chars().peekable();
+    let chars = sql.chars();
     let mut in_string = false;
     let mut string_char = '"';
     let mut current_word = String::new();
 
-    while let Some(ch) = chars.next() {
+    for ch in chars {
         // Track string literals
         if !in_string && (ch == '\'' || ch == '"') {
             in_string = true;

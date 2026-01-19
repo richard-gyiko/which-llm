@@ -95,6 +95,10 @@ async fn run() -> Result<()> {
         Commands::Profile { .. } | Commands::Cache { .. } => unreachable!(),
     };
 
+    // Print attribution (required by API terms)
+    eprintln!();
+    eprintln!("Data provided by Artificial Analysis (https://artificialanalysis.ai)");
+
     // Show low quota warning if applicable
     if let Some(q) = quota {
         if q.is_low() {

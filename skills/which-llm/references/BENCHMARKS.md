@@ -30,27 +30,31 @@ The intelligence score is a weighted composite of 10 evaluations across 4 catego
 | **General** | Long-context reasoning, knowledge/hallucination, instruction following |
 | **Scientific Reasoning** | Graduate-level science (GPQA, HLE), physics (CritPt) |
 
+**Scale Calibration (Jan 2026):** The v4.0 index was recalibrated to create headroom for future improvements. Current SOTA models (GPT-5.2, Claude Opus 4.5) score ~50. Legacy models from 2024 (e.g., Llama 3.1 405B) score ~15. This is intentional—the scale measures real-world economic work capability, not academic test performance.
+
 **Confidence interval:** ±1% (so 45 vs 46 is effectively equivalent)
 
 ## Intelligence Score Interpretation
 
+> **Note:** These tiers are calibrated for Intelligence Index v4.0 (Jan 2026). Current SOTA is ~50.
+
 | Score | Tier | Capabilities |
 |-------|------|--------------|
-| **60+** | Frontier | Research-level problems, PhD-level reasoning, complex autonomous agents |
-| **50-60** | Very Strong | Professional coding, complex analysis, multi-step agentic tasks |
-| **40-50** | Strong | Most business tasks, standard coding, document Q&A, analysis |
-| **30-40** | Capable | Simple coding, basic Q&A, content generation, straightforward tasks |
-| **20-30** | Basic | Chat, simple queries, drafting text, basic assistance |
-| **<20** | Limited | Very simple tasks only |
+| **48+** | Frontier | Complex autonomous agents, research-level problems, PhD-level reasoning |
+| **40-48** | Very Strong | Professional coding, complex analysis, multi-step agentic tasks |
+| **30-40** | Strong | Most business tasks, standard coding, document Q&A, analysis |
+| **20-30** | Capable | Simple coding, basic Q&A, content generation, straightforward tasks |
+| **10-20** | Basic | Chat, simple queries, drafting text, basic assistance |
+| **<10** | Limited | Very simple tasks only |
 
 ## Coding Score Interpretation
 
 | Score | Capability |
 |-------|------------|
-| **50+** | Exceptional - complex systems, debugging, architecture |
-| **40-50** | Strong - professional software development |
-| **30-40** | Capable - standard coding tasks, scripts |
-| **<30** | Limited - simple code only |
+| **45+** | Exceptional - complex systems, debugging, architecture |
+| **35-45** | Strong - professional software development |
+| **25-35** | Capable - standard coding tasks, scripts |
+| **<25** | Limited - simple code only |
 
 ## Math Score Interpretation
 

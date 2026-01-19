@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires `aa` CLI installed and configured with API key
 metadata:
   author: artificial-analysis-cli
-  version: "1.0"
+  version: "1.1"
   category: "ai"
 allowed-tools: Bash(aa:*) Read
 ---
@@ -39,12 +39,14 @@ If not installed, see [references/INSTALL.md](references/INSTALL.md) for install
 
 ## Skill Type → Requirements
 
+> **Note:** These thresholds are calibrated for Intelligence Index v4.0 (Jan 2026), where current SOTA models score ~50. See [references/BENCHMARKS.md](references/BENCHMARKS.md) for score interpretation.
+
 | Skill Type | Examples | Min Intelligence | Min Coding |
 |------------|----------|------------------|------------|
-| **Transformational** | summarize, extract, reformat | 30 | - |
-| **Analytical** | compare, analyze, justify | 45 | - |
-| **Tool-using** | API calls, DB queries, code execution | 40 | 40 |
-| **Agentic** | plan, decompose, orchestrate, self-critique | 55 | 45 |
+| **Transformational** | summarize, extract, reformat | 20 | - |
+| **Analytical** | compare, analyze, justify | 38 | - |
+| **Tool-using** | API calls, DB queries, code execution | 35 | 35 |
+| **Agentic** | plan, decompose, orchestrate, self-critique | 48 | 42 |
 
 ## Core Queries
 
@@ -52,7 +54,7 @@ If not installed, see [references/INSTALL.md](references/INSTALL.md) for install
 # Find models meeting requirements, sorted by price
 aa query "SELECT name, creator, intelligence, coding, price, tps 
           FROM llms 
-          WHERE intelligence >= 45 
+          WHERE intelligence >= 38 
           ORDER BY price 
           LIMIT 10"
 
@@ -65,7 +67,7 @@ aa query "SELECT name, intelligence, tps, latency, price
 # Best coding models under budget
 aa query "SELECT name, coding, intelligence, price 
           FROM llms 
-          WHERE coding >= 40 AND price < 10 
+          WHERE coding >= 35 AND price < 10 
           ORDER BY coding DESC"
 ```
 

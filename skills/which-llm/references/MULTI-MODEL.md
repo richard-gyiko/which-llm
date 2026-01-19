@@ -13,10 +13,12 @@ Consider multi-model architecture when:
 
 ## The Pattern
 
+> **Note:** Thresholds calibrated for Intelligence Index v4.0 (Jan 2026), where current SOTA is ~50.
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │                    ORCHESTRATOR                      │
-│              (intelligence 55+, coding 45+)          │
+│              (intelligence 48+, coding 42+)          │
 │         Planning, decomposition, decisions           │
 └─────────────────────┬───────────────────────────────┘
                       │
@@ -24,7 +26,7 @@ Consider multi-model architecture when:
         ▼             ▼             ▼
    ┌─────────┐  ┌─────────┐  ┌─────────┐
    │ Extract │  │ Execute │  │ Format  │
-   │  (30+)  │  │  (40+)  │  │  (25+)  │
+   │  (20+)  │  │  (35+)  │  │  (15+)  │
    └─────────┘  └─────────┘  └─────────┘
      Cheap        Medium       Cheapest
 ```
@@ -33,11 +35,11 @@ Consider multi-model architecture when:
 
 | Role | Min Intelligence | Min Coding | Priority |
 |------|------------------|------------|----------|
-| **Orchestrator** | 55 | 45 | Capability over cost |
-| **Reasoning Worker** | 45 | - | Balance |
-| **Tool Worker** | 40 | 40 | Reliability |
-| **Extraction Worker** | 30 | - | Cost |
-| **Formatting Worker** | 25 | - | Cost |
+| **Orchestrator** | 48 | 42 | Capability over cost |
+| **Reasoning Worker** | 38 | - | Balance |
+| **Tool Worker** | 35 | 35 | Reliability |
+| **Extraction Worker** | 20 | - | Cost |
+| **Formatting Worker** | 15 | - | Cost |
 
 ## Finding Models by Role
 
@@ -45,7 +47,7 @@ Consider multi-model architecture when:
 ```bash
 aa query "SELECT name, creator, intelligence, coding, price 
           FROM llms 
-          WHERE intelligence >= 55 AND coding >= 45 
+          WHERE intelligence >= 48 AND coding >= 42 
           ORDER BY intelligence DESC 
           LIMIT 5"
 ```
@@ -54,7 +56,7 @@ aa query "SELECT name, creator, intelligence, coding, price
 ```bash
 aa query "SELECT name, creator, intelligence, price 
           FROM llms 
-          WHERE intelligence >= 45 
+          WHERE intelligence >= 38 
           ORDER BY price 
           LIMIT 5"
 ```
@@ -63,7 +65,7 @@ aa query "SELECT name, creator, intelligence, price
 ```bash
 aa query "SELECT name, creator, intelligence, coding, price 
           FROM llms 
-          WHERE intelligence >= 40 AND coding >= 40 
+          WHERE intelligence >= 35 AND coding >= 35 
           ORDER BY price 
           LIMIT 5"
 ```
@@ -72,7 +74,7 @@ aa query "SELECT name, creator, intelligence, coding, price
 ```bash
 aa query "SELECT name, creator, intelligence, price, tps 
           FROM llms 
-          WHERE intelligence >= 25 
+          WHERE intelligence >= 15 
           ORDER BY price 
           LIMIT 5"
 ```

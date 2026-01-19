@@ -16,7 +16,7 @@ aa query "SELECT name, creator, intelligence, coding, price
 ```bash
 aa query "SELECT name, creator, intelligence, price, tps 
           FROM llms 
-          WHERE intelligence >= 30 
+          WHERE intelligence >= 20 
           ORDER BY price 
           LIMIT 10"
 ```
@@ -41,7 +41,7 @@ aa query "SELECT name, creator, coding, intelligence, price
 ```bash
 aa query "SELECT name, creator, intelligence, coding, price 
           FROM llms 
-          WHERE intelligence >= 55 AND coding >= 45 
+          WHERE intelligence >= 48 AND coding >= 42 
           ORDER BY intelligence DESC 
           LIMIT 10"
 ```
@@ -50,7 +50,7 @@ aa query "SELECT name, creator, intelligence, coding, price
 ```bash
 aa query "SELECT name, creator, intelligence, price 
           FROM llms 
-          WHERE intelligence >= 30 
+          WHERE intelligence >= 20 
           ORDER BY price 
           LIMIT 10"
 ```
@@ -135,7 +135,7 @@ aa query "SELECT
 ```bash
 aa query "SELECT name, creator, intelligence, price, tps 
           FROM llms 
-          WHERE intelligence >= 30 
+          WHERE intelligence >= 20 
           ORDER BY price 
           LIMIT 10"
 ```
@@ -144,7 +144,7 @@ aa query "SELECT name, creator, intelligence, price, tps
 ```bash
 aa query "SELECT name, creator, intelligence, price 
           FROM llms 
-          WHERE intelligence >= 45 
+          WHERE intelligence >= 38 
           ORDER BY price 
           LIMIT 10"
 ```
@@ -153,7 +153,7 @@ aa query "SELECT name, creator, intelligence, price
 ```bash
 aa query "SELECT name, creator, intelligence, coding, price 
           FROM llms 
-          WHERE intelligence >= 40 AND coding >= 40 
+          WHERE intelligence >= 35 AND coding >= 35 
           ORDER BY price 
           LIMIT 10"
 ```
@@ -162,7 +162,7 @@ aa query "SELECT name, creator, intelligence, coding, price
 ```bash
 aa query "SELECT name, creator, intelligence, coding, price 
           FROM llms 
-          WHERE intelligence >= 55 AND coding >= 45 
+          WHERE intelligence >= 48 AND coding >= 42 
           ORDER BY price 
           LIMIT 10"
 ```

@@ -6,7 +6,7 @@ use crate::error::{AppError, Result};
 use crate::output::OutputFormat;
 use crate::schema::{self, Column, ALL_TABLES};
 use comfy_table::{presets::ASCII_BORDERS_ONLY_CONDENSED, Table};
-use duckdb::types::Value;
+use duckdb::arrow::array::Array;
 use duckdb::Connection;
 use sqlparser::ast::{ObjectName, Visit, Visitor};
 use sqlparser::dialect::GenericDialect;
@@ -218,7 +218,7 @@ impl QueryExecutor {
         let conn = Connection::open_in_memory()
             .map_err(|e| AppError::Query(format!("DuckDB error: {}", e)))?;
 
-        // Execute the query
+        // Execute the query and get results as Arrow RecordBatches
         let mut stmt = conn.prepare(&transformed_sql).map_err(|e| {
             // Provide helpful error messages for common mistakes
             let msg = e.to_string();
@@ -234,46 +234,36 @@ impl QueryExecutor {
             }
         })?;
 
-        // Get column names
-        let columns: Vec<String> = stmt
-            .column_names()
-            .into_iter()
-            .map(|s| s.to_string())
+        // Use query_arrow to get results as Arrow RecordBatches (avoids panicky type conversion)
+        let batches: Vec<_> = stmt
+            .query_arrow([])
+            .map_err(|e| AppError::Query(format!("Query error: {}", e)))?
             .collect();
 
-        // Fetch rows
-        let mut rows = Vec::new();
-        let mut query_rows = stmt
-            .query([])
-            .map_err(|e| AppError::Query(format!("Query error: {}", e)))?;
+        if batches.is_empty() {
+            return Ok(QueryResult {
+                columns: vec![],
+                rows: vec![],
+            });
+        }
 
-        while let Some(row) = query_rows
-            .next()
-            .map_err(|e| AppError::Query(format!("Row error: {}", e)))?
-        {
-            let mut row_values = Vec::new();
-            for i in 0..columns.len() {
-                let value: Value = row.get(i).unwrap_or(Value::Null);
-                let string_value = match value {
-                    Value::Null => String::new(),
-                    Value::Boolean(b) => b.to_string(),
-                    Value::TinyInt(n) => n.to_string(),
-                    Value::SmallInt(n) => n.to_string(),
-                    Value::Int(n) => n.to_string(),
-                    Value::BigInt(n) => n.to_string(),
-                    Value::HugeInt(n) => n.to_string(),
-                    Value::UTinyInt(n) => n.to_string(),
-                    Value::USmallInt(n) => n.to_string(),
-                    Value::UInt(n) => n.to_string(),
-                    Value::UBigInt(n) => n.to_string(),
-                    Value::Float(f) => format!("{:.2}", f),
-                    Value::Double(f) => format!("{:.2}", f),
-                    Value::Text(s) => s,
-                    _ => format!("{:?}", value),
-                };
-                row_values.push(string_value);
+        // Get column names from the first batch's schema
+        let schema = batches[0].schema();
+        let columns: Vec<String> = schema.fields().iter().map(|f| f.name().clone()).collect();
+
+        // Convert Arrow arrays to strings
+        let mut rows = Vec::new();
+        for batch in &batches {
+            let num_rows = batch.num_rows();
+            for row_idx in 0..num_rows {
+                let mut row_values = Vec::new();
+                for col_idx in 0..batch.num_columns() {
+                    let col = batch.column(col_idx);
+                    let string_value = arrow_value_to_string(col.as_ref(), row_idx);
+                    row_values.push(string_value);
+                }
+                rows.push(row_values);
             }
-            rows.push(row_values);
         }
 
         Ok(QueryResult { columns, rows })
@@ -305,6 +295,150 @@ impl QueryExecutor {
         }
 
         tables
+    }
+}
+
+/// Convert an Arrow array value at a given row index to a string.
+/// Uses Arrow's built-in display formatting to handle all types safely.
+fn arrow_value_to_string(array: &dyn Array, row: usize) -> String {
+    use duckdb::arrow::array::*;
+    use duckdb::arrow::datatypes::*;
+
+    if array.is_null(row) {
+        return String::new();
+    }
+
+    match array.data_type() {
+        DataType::Null => String::new(),
+        DataType::Boolean => {
+            let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::Int8 => {
+            let arr = array.as_any().downcast_ref::<Int8Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::Int16 => {
+            let arr = array.as_any().downcast_ref::<Int16Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::Int32 => {
+            let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::Int64 => {
+            let arr = array.as_any().downcast_ref::<Int64Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::UInt8 => {
+            let arr = array.as_any().downcast_ref::<UInt8Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::UInt16 => {
+            let arr = array.as_any().downcast_ref::<UInt16Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::UInt32 => {
+            let arr = array.as_any().downcast_ref::<UInt32Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::UInt64 => {
+            let arr = array.as_any().downcast_ref::<UInt64Array>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::Float16 | DataType::Float32 => {
+            let arr = array.as_any().downcast_ref::<Float32Array>().unwrap();
+            format!("{:.2}", arr.value(row))
+        }
+        DataType::Float64 => {
+            let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
+            format!("{:.2}", arr.value(row))
+        }
+        DataType::Utf8 => {
+            let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::LargeUtf8 => {
+            let arr = array.as_any().downcast_ref::<LargeStringArray>().unwrap();
+            arr.value(row).to_string()
+        }
+        DataType::Binary => {
+            let arr = array.as_any().downcast_ref::<BinaryArray>().unwrap();
+            format!("<binary:{} bytes>", arr.value(row).len())
+        }
+        DataType::LargeBinary => {
+            let arr = array.as_any().downcast_ref::<LargeBinaryArray>().unwrap();
+            format!("<binary:{} bytes>", arr.value(row).len())
+        }
+        DataType::Date32 => {
+            let arr = array.as_any().downcast_ref::<Date32Array>().unwrap();
+            // Date32 is days since epoch
+            let days = arr.value(row);
+            format!("{}", days)
+        }
+        DataType::Date64 => {
+            let arr = array.as_any().downcast_ref::<Date64Array>().unwrap();
+            let ms = arr.value(row);
+            format!("{}", ms)
+        }
+        DataType::Timestamp(unit, _) => match unit {
+            TimeUnit::Second => {
+                let arr = array
+                    .as_any()
+                    .downcast_ref::<TimestampSecondArray>()
+                    .unwrap();
+                arr.value(row).to_string()
+            }
+            TimeUnit::Millisecond => {
+                let arr = array
+                    .as_any()
+                    .downcast_ref::<TimestampMillisecondArray>()
+                    .unwrap();
+                arr.value(row).to_string()
+            }
+            TimeUnit::Microsecond => {
+                let arr = array
+                    .as_any()
+                    .downcast_ref::<TimestampMicrosecondArray>()
+                    .unwrap();
+                arr.value(row).to_string()
+            }
+            TimeUnit::Nanosecond => {
+                let arr = array
+                    .as_any()
+                    .downcast_ref::<TimestampNanosecondArray>()
+                    .unwrap();
+                arr.value(row).to_string()
+            }
+        },
+        DataType::Decimal128(_, scale) => {
+            let arr = array.as_any().downcast_ref::<Decimal128Array>().unwrap();
+            let value = arr.value(row);
+            if *scale == 0 {
+                value.to_string()
+            } else {
+                // Format with decimal places
+                let divisor = 10i128.pow(*scale as u32);
+                let int_part = value / divisor;
+                let frac_part = (value % divisor).abs();
+                format!(
+                    "{}.{:0>width$}",
+                    int_part,
+                    frac_part,
+                    width = *scale as usize
+                )
+            }
+        }
+        // For complex types, use Arrow's display formatting
+        _ => {
+            // Use the ArrayFormatter for complex types
+            use duckdb::arrow::util::display::ArrayFormatter;
+            let options = duckdb::arrow::util::display::FormatOptions::default();
+            match ArrayFormatter::try_new(array, &options) {
+                Ok(formatter) => formatter.value(row).to_string(),
+                Err(_) => format!("<{}>", array.data_type()),
+            }
+        }
     }
 }
 

@@ -4,6 +4,36 @@ A command-line interface for querying AI model benchmarks from [Artificial Analy
 
 ## Installation
 
+### Windows (Scoop)
+
+```powershell
+scoop bucket add aa https://github.com/richard-gyiko/scoop-aa
+scoop install aa
+```
+
+### macOS / Linux
+
+Download the latest release from [GitHub Releases](https://github.com/richard-gyiko/artificial-analysis-cli/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/aa-aarch64-apple-darwin.tar.gz
+tar -xzf aa-aarch64-apple-darwin.tar.gz
+sudo mv aa /usr/local/bin/
+
+# macOS (Intel)
+curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/aa-x86_64-apple-darwin.tar.gz
+tar -xzf aa-x86_64-apple-darwin.tar.gz
+sudo mv aa /usr/local/bin/
+
+# Linux
+curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/aa-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf aa-x86_64-unknown-linux-gnu.tar.gz
+sudo mv aa /usr/local/bin/
+```
+
+### From Source
+
 ```bash
 cargo install --path .
 ```

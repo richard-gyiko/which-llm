@@ -2,6 +2,7 @@
 
 use crate::sources::models_dev::models::{ModelsDevModel, ModelsDevProvider};
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -74,21 +75,23 @@ pub fn normalize_provider(slug: &str) -> String {
 }
 
 /// Normalize version separators by converting dots to dashes between digits.
+/// Uses Cow to avoid allocation when no transformation is needed.
 /// Examples:
 /// - "gemini-2.5-flash" -> "gemini-2-5-flash"
 /// - "gpt-4.1-mini" -> "gpt-4-1-mini"
 /// - "claude-3.5-sonnet" -> "claude-3-5-sonnet"
-pub fn normalize_version_separators(slug: &str) -> String {
-    RE_VERSION_SEPARATOR.replace_all(slug, "$1-$2").to_string()
+pub fn normalize_version_separators(slug: &str) -> Cow<'_, str> {
+    RE_VERSION_SEPARATOR.replace_all(slug, "$1-$2")
 }
 
 /// Strip provider prefix from model slug (e.g., "mistral/mistral-large-3" -> "mistral-large-3").
+/// Uses Cow to avoid allocation when no transformation is needed.
 /// models.dev IDs sometimes have provider prefixes like "provider/model".
-pub fn strip_provider_prefix(slug: &str) -> String {
+pub fn strip_provider_prefix(slug: &str) -> Cow<'_, str> {
     if let Some(pos) = slug.find('/') {
-        slug[pos + 1..].to_string()
+        Cow::Owned(slug[pos + 1..].to_string())
     } else {
-        slug.to_string()
+        Cow::Borrowed(slug)
     }
 }
 
@@ -98,18 +101,19 @@ pub fn strip_provider_prefix(slug: &str) -> String {
 /// - "gemini-2-5-flash-reasoning" -> Some("gemini-2-5-flash")
 /// - "deepseek-v3-2-non-reasoning" -> Some("deepseek-v3-2")
 /// - "gpt-4o" -> None
-pub fn strip_reasoning_suffix(slug: &str) -> Option<String> {
+pub fn strip_reasoning_suffix(slug: &str) -> Option<Cow<'_, str>> {
     // Check -non-reasoning first (longer suffix)
     if let Some(base) = slug.strip_suffix("-non-reasoning") {
-        Some(base.to_string())
+        Some(Cow::Borrowed(base))
     } else if let Some(base) = slug.strip_suffix("-reasoning") {
-        Some(base.to_string())
+        Some(Cow::Borrowed(base))
     } else {
         None
     }
 }
 
 /// Expand compressed version numbers in model names.
+/// Uses Cow to avoid allocation when no transformation is needed.
 /// Examples:
 /// - "gpt-35-turbo" -> "gpt-3-5-turbo"
 /// - "claude-35-sonnet" -> "claude-3-5-sonnet"
@@ -117,15 +121,20 @@ pub fn strip_reasoning_suffix(slug: &str) -> Option<String> {
 ///
 /// Pattern: When a model name contains two consecutive digits after a hyphen
 /// that look like a version (e.g., `-35-`, `-21`), expand them to `-3-5-`, `-2-1`.
-pub fn expand_compressed_version(slug: &str) -> String {
+pub fn expand_compressed_version(slug: &str) -> Cow<'_, str> {
     // First handle mid-string patterns (-35- → -3-5-)
-    let expanded = RE_COMPRESSED_VERSION_MID
-        .replace_all(slug, "-$1-$2-")
-        .to_string();
+    let expanded = RE_COMPRESSED_VERSION_MID.replace_all(slug, "-$1-$2-");
     // Then handle end-of-string patterns (-35$ → -3-5)
-    RE_COMPRESSED_VERSION_END
-        .replace_all(&expanded, "-$1-$2")
-        .to_string()
+    match expanded {
+        Cow::Borrowed(s) => RE_COMPRESSED_VERSION_END.replace_all(s, "-$1-$2"),
+        Cow::Owned(s) => {
+            let result = RE_COMPRESSED_VERSION_END.replace_all(&s, "-$1-$2");
+            match result {
+                Cow::Borrowed(_) => Cow::Owned(s),
+                Cow::Owned(new_s) => Cow::Owned(new_s),
+            }
+        }
+    }
 }
 
 /// Try to add -it suffix for Gemma models.
@@ -148,7 +157,10 @@ pub fn try_add_it_suffix(slug: &str) -> Option<String> {
 /// These providers use different naming for model sizes (mini, nano, flash, lite).
 ///
 /// Returns `Some(base)` if a suffix was stripped, `None` otherwise.
-pub fn strip_effort_suffix_for_provider(slug: &str, creator: Option<&str>) -> Option<String> {
+pub fn strip_effort_suffix_for_provider<'a>(
+    slug: &'a str,
+    creator: Option<&str>,
+) -> Option<Cow<'a, str>> {
     // Only strip for specific providers
     let creator_lower = creator?.to_lowercase();
     if !matches!(creator_lower.as_str(), "google" | "openai" | "anthropic") {
@@ -158,7 +170,7 @@ pub fn strip_effort_suffix_for_provider(slug: &str, creator: Option<&str>) -> Op
     // Try stripping effort level suffixes
     for suffix in &["-low", "-medium", "-high", "-minimal"] {
         if let Some(base) = slug.strip_suffix(suffix) {
-            return Some(base.to_string());
+            return Some(Cow::Borrowed(base));
         }
     }
 
@@ -166,20 +178,181 @@ pub fn strip_effort_suffix_for_provider(slug: &str, creator: Option<&str>) -> Op
 }
 
 /// Strip version suffixes from model slugs.
+/// Uses Cow to avoid allocation when no transformation is needed.
 /// Examples:
 /// - "claude-3-5-sonnet-20241022" -> "claude-3-5-sonnet"
 /// - "gpt-4o-2024-08-06" -> "gpt-4o"
-pub fn strip_version_suffix(slug: &str) -> String {
+pub fn strip_version_suffix(slug: &str) -> Cow<'_, str> {
     // Pattern 1: -YYYYMMDD suffix
     let stripped = RE_DATE.replace(slug, "");
 
     // Pattern 2: -YYYY-MM-DD suffix
-    let stripped = RE_DATE_DASHED.replace(&stripped, "");
+    let stripped = match stripped {
+        Cow::Borrowed(s) => RE_DATE_DASHED.replace(s, ""),
+        Cow::Owned(s) => {
+            let result = RE_DATE_DASHED.replace(&s, "");
+            match result {
+                Cow::Borrowed(_) => Cow::Owned(s),
+                Cow::Owned(new_s) => Cow::Owned(new_s),
+            }
+        }
+    };
 
     // Pattern 3: -vX.Y.Z version suffix
-    let stripped = RE_VERSION.replace(&stripped, "");
+    match stripped {
+        Cow::Borrowed(s) => RE_VERSION.replace(s, ""),
+        Cow::Owned(s) => {
+            let result = RE_VERSION.replace(&s, "");
+            match result {
+                Cow::Borrowed(_) => Cow::Owned(s),
+                Cow::Owned(new_s) => Cow::Owned(new_s),
+            }
+        }
+    }
+}
 
-    stripped.to_string()
+/// All normalized variants of an AA slug we should try to match.
+/// Pre-computed to enable single-pass matching.
+struct NormalizedSlugs<'a> {
+    /// Slug with version suffix stripped (if different)
+    stripped_version: Option<Cow<'a, str>>,
+    /// Slug with version separators normalized (dots to dashes)
+    normalized_separators: Option<Cow<'a, str>>,
+    /// Slug with reasoning suffix stripped
+    stripped_reasoning: Option<Cow<'a, str>>,
+    /// Reasoning slug with normalized separators
+    reasoning_normalized: Option<Cow<'a, str>>,
+    /// Slug with expanded compressed version (e.g., 35 -> 3-5)
+    expanded_version: Option<Cow<'a, str>>,
+    /// Expanded slug with normalized separators
+    expanded_normalized: Option<Cow<'a, str>>,
+    /// Slug with -it suffix added (for Gemma models)
+    with_it_suffix: Option<String>,
+    /// Slug with effort suffix stripped
+    stripped_effort: Option<Cow<'a, str>>,
+    /// Effort-stripped slug with normalized separators
+    effort_normalized: Option<Cow<'a, str>>,
+}
+
+impl<'a> NormalizedSlugs<'a> {
+    fn new(aa_slug: &'a str, aa_creator_slug: Option<&str>) -> Self {
+        // Pre-compute all variants
+        let stripped_version = {
+            let v = strip_version_suffix(aa_slug);
+            if v.as_ref() != aa_slug {
+                Some(v)
+            } else {
+                None
+            }
+        };
+
+        let normalized_separators = {
+            let v = normalize_version_separators(aa_slug);
+            if v.as_ref() != aa_slug {
+                Some(v)
+            } else {
+                None
+            }
+        };
+
+        let stripped_reasoning = strip_reasoning_suffix(aa_slug);
+
+        let reasoning_normalized = stripped_reasoning.as_ref().and_then(|base| {
+            let v = normalize_version_separators(base);
+            if v.as_ref() != base.as_ref() {
+                Some(v.into_owned().into())
+            } else {
+                None
+            }
+        });
+
+        let expanded_version = {
+            let v = expand_compressed_version(aa_slug);
+            if v.as_ref() != aa_slug {
+                Some(v)
+            } else {
+                None
+            }
+        };
+
+        let expanded_normalized = expanded_version.as_ref().and_then(|exp| {
+            let v = normalize_version_separators(exp);
+            if v.as_ref() != exp.as_ref() {
+                Some(v.into_owned().into())
+            } else {
+                None
+            }
+        });
+
+        let with_it_suffix = try_add_it_suffix(aa_slug);
+
+        let stripped_effort = strip_effort_suffix_for_provider(aa_slug, aa_creator_slug);
+
+        let effort_normalized = stripped_effort.as_ref().and_then(|base| {
+            let v = normalize_version_separators(base);
+            if v.as_ref() != base.as_ref() {
+                Some(v.into_owned().into())
+            } else {
+                None
+            }
+        });
+
+        Self {
+            stripped_version,
+            normalized_separators,
+            stripped_reasoning,
+            reasoning_normalized,
+            expanded_version,
+            expanded_normalized,
+            with_it_suffix,
+            stripped_effort,
+            effort_normalized,
+        }
+    }
+}
+
+/// All normalized variants of a models.dev model ID we should consider.
+/// Pre-computed to enable efficient matching.
+struct ModelIdVariants<'a> {
+    /// Original model ID (lowercased for comparison)
+    original_lower: String,
+    /// Model ID with version suffix stripped
+    stripped_version: Cow<'a, str>,
+    /// Model ID with version separators normalized
+    normalized_separators: Cow<'a, str>,
+    /// Model ID with provider prefix stripped
+    stripped_prefix: Cow<'a, str>,
+}
+
+impl<'a> ModelIdVariants<'a> {
+    fn new(model_id: &'a str) -> Self {
+        Self {
+            original_lower: model_id.to_lowercase(),
+            stripped_version: strip_version_suffix(model_id),
+            normalized_separators: normalize_version_separators(model_id),
+            stripped_prefix: strip_provider_prefix(model_id),
+        }
+    }
+}
+
+/// Helper function to find a model matching a predicate across all providers.
+/// Returns the first match found.
+fn find_model_by<'a, F>(
+    providers: &'a HashMap<String, ModelsDevProvider>,
+    mut predicate: F,
+) -> Option<(&'a str, &'a ModelsDevModel)>
+where
+    F: FnMut(&str, &ModelIdVariants<'_>) -> bool,
+{
+    for provider in providers.values() {
+        for (model_id, model) in &provider.models {
+            let variants = ModelIdVariants::new(model_id);
+            if predicate(&provider.id, &variants) {
+                return Some((&provider.id, model));
+            }
+        }
+    }
+    None
 }
 
 /// Find a matching models.dev model for an AA model.
@@ -190,125 +363,121 @@ pub fn find_match<'a>(
 ) -> Option<MatchResult<'a>> {
     let aa_provider = aa_creator_slug.map(normalize_provider).unwrap_or_default();
     let aa_slug = aa_model_slug.to_lowercase();
+    let provider_was_normalized = aa_creator_slug
+        .map(|s| s.to_lowercase() != aa_provider)
+        .unwrap_or(false);
 
-    // 1. Try exact match with normalized provider
+    // Pre-compute all AA slug variants
+    let slugs = NormalizedSlugs::new(&aa_slug, aa_creator_slug);
+
+    // Strategy 1: Try exact match with normalized provider (HashMap lookup - O(1))
     if let Some(provider) = providers.get(&aa_provider) {
-        if let Some(model) = provider.models.get(&aa_slug) {
-            return Some(MatchResult {
-                provider_id: &provider.id,
-                model,
-                match_type: if aa_creator_slug.map(|s| s.to_lowercase())
-                    == Some(aa_provider.clone())
-                {
-                    MatchType::Exact
-                } else {
-                    MatchType::NormalizedProvider
-                },
-            });
+        // Try direct lookup with lowercased comparison
+        for (model_id, model) in &provider.models {
+            if model_id.to_lowercase() == aa_slug {
+                return Some(MatchResult {
+                    provider_id: &provider.id,
+                    model,
+                    match_type: if provider_was_normalized {
+                        MatchType::NormalizedProvider
+                    } else {
+                        MatchType::Exact
+                    },
+                });
+            }
         }
     }
 
-    // 2. Try exact match across all providers (in case creator slug differs)
-    for (provider_id, provider) in providers {
-        if let Some(model) = provider.models.get(&aa_slug) {
+    // Strategy 2: Try exact match across all providers (linear scan)
+    if let Some((provider_id, model)) =
+        find_model_by(providers, |_, variants| variants.original_lower == aa_slug)
+    {
+        return Some(MatchResult {
+            provider_id,
+            model,
+            match_type: MatchType::Exact,
+        });
+    }
+
+    // Strategy 3: Fuzzy matching (version suffix stripped)
+    // 3a: AA slug has version, try matching stripped AA slug to stripped models.dev slugs
+    if let Some(ref base_slug) = slugs.stripped_version {
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.stripped_version.to_lowercase() == base_slug.as_ref()
+        }) {
             return Some(MatchResult {
                 provider_id,
                 model,
-                match_type: MatchType::Exact,
+                match_type: MatchType::Fuzzy,
             });
         }
     }
 
-    // 3. Try fuzzy matching (strip version suffixes)
-    let base_slug = strip_version_suffix(&aa_slug);
-    if base_slug != aa_slug {
-        // First try with normalized provider
-        if let Some(provider) = providers.get(&aa_provider) {
-            for (model_id, model) in &provider.models {
-                if strip_version_suffix(model_id) == base_slug {
-                    return Some(MatchResult {
-                        provider_id: &provider.id,
-                        model,
-                        match_type: MatchType::Fuzzy,
-                    });
-                }
-            }
-        }
+    // 3b: models.dev has version, AA doesn't - strip models.dev version to match AA
+    if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+        variants.stripped_version.to_lowercase() == aa_slug
+    }) {
+        return Some(MatchResult {
+            provider_id,
+            model,
+            match_type: MatchType::Fuzzy,
+        });
+    }
 
-        // Try across all providers
-        for (provider_id, provider) in providers {
-            for (model_id, model) in &provider.models {
-                if strip_version_suffix(model_id) == base_slug {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::Fuzzy,
-                    });
-                }
-            }
+    // Strategy 4: Normalized version separators (dots <-> dashes)
+    // 4a: Normalize AA slug and try direct match
+    if let Some(ref normalized) = slugs.normalized_separators {
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.original_lower == normalized.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::NormalizedVersionSeparator,
+            });
         }
     }
 
-    // 4. Try matching model slugs that differ only in the models.dev side having a version
-    for (provider_id, provider) in providers {
-        for (model_id, model) in &provider.models {
-            if strip_version_suffix(model_id) == aa_slug {
-                return Some(MatchResult {
-                    provider_id,
-                    model,
-                    match_type: MatchType::Fuzzy,
-                });
-            }
-        }
+    // 4b: Normalize models.dev slug to match AA slug
+    if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+        variants.normalized_separators.to_lowercase() == aa_slug
+    }) {
+        return Some(MatchResult {
+            provider_id,
+            model,
+            match_type: MatchType::NormalizedVersionSeparator,
+        });
     }
 
-    // 5. Try matching with normalized version separators (dots to dashes)
-    let normalized_aa_slug = normalize_version_separators(&aa_slug);
-    if normalized_aa_slug != aa_slug {
-        // Try exact match with normalized version separators
-        for (provider_id, provider) in providers {
-            if let Some(model) = provider.models.get(&normalized_aa_slug) {
-                return Some(MatchResult {
-                    provider_id,
-                    model,
-                    match_type: MatchType::NormalizedVersionSeparator,
-                });
-            }
-        }
-    }
-    // Also try normalizing models.dev slugs to match AA slug
-    for (provider_id, provider) in providers {
-        for (model_id, model) in &provider.models {
-            if normalize_version_separators(model_id) == aa_slug {
-                return Some(MatchResult {
-                    provider_id,
-                    model,
-                    match_type: MatchType::NormalizedVersionSeparator,
-                });
-            }
-        }
+    // Strategy 5: Stripped provider prefix (e.g., "mistral/mistral-large-3" -> "mistral-large-3")
+    if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+        variants.stripped_prefix.to_lowercase() == aa_slug
+    }) {
+        return Some(MatchResult {
+            provider_id,
+            model,
+            match_type: MatchType::StrippedProviderPrefix,
+        });
     }
 
-    // 6. Try matching with stripped provider prefix from models.dev IDs
-    // e.g., AA's "mistral-large-3" should match models.dev's "mistral/mistral-large-3"
-    for (provider_id, provider) in providers {
-        for (model_id, model) in &provider.models {
-            if strip_provider_prefix(model_id) == aa_slug {
-                return Some(MatchResult {
-                    provider_id,
-                    model,
-                    match_type: MatchType::StrippedProviderPrefix,
-                });
-            }
+    // Strategy 6: Reasoning variants (-reasoning, -non-reasoning suffix)
+    if let Some(ref base_slug) = slugs.stripped_reasoning {
+        // 6a: Direct match with base slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.original_lower == base_slug.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::ReasoningVariant,
+            });
         }
-    }
 
-    // 7. Try matching after stripping -reasoning or -non-reasoning suffix
-    // AA benchmarks the same model in different reasoning modes separately
-    if let Some(base_slug) = strip_reasoning_suffix(&aa_slug) {
-        // Try direct match with base slug
-        for (provider_id, provider) in providers {
-            if let Some(model) = provider.models.get(&base_slug) {
+        // 6b: Normalized version separators on reasoning-stripped slug
+        if let Some(ref normalized) = slugs.reasoning_normalized {
+            if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+                variants.original_lower == normalized.as_ref()
+            }) {
                 return Some(MatchResult {
                     provider_id,
                     model,
@@ -317,52 +486,47 @@ pub fn find_match<'a>(
             }
         }
 
-        // Try with normalized version separators (dots to dashes)
-        let normalized_base = normalize_version_separators(&base_slug);
-        if normalized_base != base_slug {
-            for (provider_id, provider) in providers {
-                if let Some(model) = provider.models.get(&normalized_base) {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::ReasoningVariant,
-                    });
-                }
-            }
-        }
-        // Also try normalizing models.dev slugs to match base slug
-        for (provider_id, provider) in providers {
-            for (model_id, model) in &provider.models {
-                if normalize_version_separators(model_id) == base_slug {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::ReasoningVariant,
-                    });
-                }
-            }
+        // 6c: Normalize models.dev slugs to match reasoning-stripped slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.normalized_separators.to_lowercase() == base_slug.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::ReasoningVariant,
+            });
         }
 
-        // Try with stripped provider prefix from models.dev IDs
-        for (provider_id, provider) in providers {
-            for (model_id, model) in &provider.models {
-                if strip_provider_prefix(model_id) == base_slug {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::ReasoningVariant,
-                    });
-                }
-            }
+        // 6d: Strip provider prefix to match reasoning-stripped slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.stripped_prefix.to_lowercase() == base_slug.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::ReasoningVariant,
+            });
         }
     }
 
-    // 8. Try matching with expanded compressed version numbers (e.g., 35 → 3-5)
-    let expanded_slug = expand_compressed_version(&aa_slug);
-    if expanded_slug != aa_slug {
-        // Try direct match with expanded slug
-        for (provider_id, provider) in providers {
-            if let Some(model) = provider.models.get(&expanded_slug) {
+    // Strategy 7: Expanded compressed version (e.g., 35 -> 3-5)
+    if let Some(ref expanded) = slugs.expanded_version {
+        // 7a: Direct match with expanded slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.original_lower == expanded.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::ExpandedVersion,
+            });
+        }
+
+        // 7b: Normalized version separators on expanded slug
+        if let Some(ref normalized) = slugs.expanded_normalized {
+            if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+                variants.original_lower == normalized.as_ref()
+            }) {
                 return Some(MatchResult {
                     provider_id,
                     model,
@@ -371,54 +535,49 @@ pub fn find_match<'a>(
             }
         }
 
-        // Try with normalized version separators on expanded slug
-        let normalized_expanded = normalize_version_separators(&expanded_slug);
-        if normalized_expanded != expanded_slug {
-            for (provider_id, provider) in providers {
-                if let Some(model) = provider.models.get(&normalized_expanded) {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::ExpandedVersion,
-                    });
-                }
-            }
-        }
-
-        // Try normalizing models.dev slugs to match expanded slug
-        for (provider_id, provider) in providers {
-            for (model_id, model) in &provider.models {
-                if normalize_version_separators(model_id) == expanded_slug {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::ExpandedVersion,
-                    });
-                }
-            }
+        // 7c: Normalize models.dev slugs to match expanded slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.normalized_separators.to_lowercase() == expanded.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::ExpandedVersion,
+            });
         }
     }
 
-    // 9. Try adding -it suffix for Gemma models
-    // Gemma models in AA are named "gemma-3-12b" but models.dev uses "gemma-3-12b-it"
-    if let Some(it_slug) = try_add_it_suffix(&aa_slug) {
-        for (provider_id, provider) in providers {
-            if let Some(model) = provider.models.get(&it_slug) {
-                return Some(MatchResult {
-                    provider_id,
-                    model,
-                    match_type: MatchType::GemmaItSuffix,
-                });
-            }
+    // Strategy 8: Gemma -it suffix
+    if let Some(ref it_slug) = slugs.with_it_suffix {
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.original_lower == it_slug.as_str()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::GemmaItSuffix,
+            });
         }
     }
 
-    // 10. Try stripping effort level suffixes for Google/OpenAI/Anthropic
-    // These providers use -low/-medium/-high/-minimal for effort levels, not model sizes
-    if let Some(base_slug) = strip_effort_suffix_for_provider(&aa_slug, aa_creator_slug) {
-        // Try direct match with base slug
-        for (provider_id, provider) in providers {
-            if let Some(model) = provider.models.get(&base_slug) {
+    // Strategy 9: Effort level suffix for Google/OpenAI/Anthropic
+    if let Some(ref base_slug) = slugs.stripped_effort {
+        // 9a: Direct match with effort-stripped slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.original_lower == base_slug.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::EffortLevel,
+            });
+        }
+
+        // 9b: Normalized version separators on effort-stripped slug
+        if let Some(ref normalized) = slugs.effort_normalized {
+            if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+                variants.original_lower == normalized.as_ref()
+            }) {
                 return Some(MatchResult {
                     provider_id,
                     model,
@@ -427,31 +586,15 @@ pub fn find_match<'a>(
             }
         }
 
-        // Try with normalized version separators
-        let normalized_base = normalize_version_separators(&base_slug);
-        if normalized_base != base_slug {
-            for (provider_id, provider) in providers {
-                if let Some(model) = provider.models.get(&normalized_base) {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::EffortLevel,
-                    });
-                }
-            }
-        }
-
-        // Try normalizing models.dev slugs to match base slug
-        for (provider_id, provider) in providers {
-            for (model_id, model) in &provider.models {
-                if normalize_version_separators(model_id) == base_slug {
-                    return Some(MatchResult {
-                        provider_id,
-                        model,
-                        match_type: MatchType::EffortLevel,
-                    });
-                }
-            }
+        // 9c: Normalize models.dev slugs to match effort-stripped slug
+        if let Some((provider_id, model)) = find_model_by(providers, |_, variants| {
+            variants.normalized_separators.to_lowercase() == base_slug.as_ref()
+        }) {
+            return Some(MatchResult {
+                provider_id,
+                model,
+                match_type: MatchType::EffortLevel,
+            });
         }
     }
 
@@ -512,12 +655,12 @@ mod tests {
     #[test]
     fn test_strip_version_suffix() {
         assert_eq!(
-            strip_version_suffix("claude-3-5-sonnet-20241022"),
+            strip_version_suffix("claude-3-5-sonnet-20241022").as_ref(),
             "claude-3-5-sonnet"
         );
-        assert_eq!(strip_version_suffix("gpt-4o-2024-08-06"), "gpt-4o");
-        assert_eq!(strip_version_suffix("model-v1.2.3"), "model");
-        assert_eq!(strip_version_suffix("gpt-4o"), "gpt-4o");
+        assert_eq!(strip_version_suffix("gpt-4o-2024-08-06").as_ref(), "gpt-4o");
+        assert_eq!(strip_version_suffix("model-v1.2.3").as_ref(), "model");
+        assert_eq!(strip_version_suffix("gpt-4o").as_ref(), "gpt-4o");
     }
 
     #[test]
@@ -588,43 +731,46 @@ mod tests {
     fn test_normalize_version_separators() {
         // Dots to dashes between digits
         assert_eq!(
-            normalize_version_separators("gemini-2.5-flash"),
+            normalize_version_separators("gemini-2.5-flash").as_ref(),
             "gemini-2-5-flash"
         );
-        assert_eq!(normalize_version_separators("gpt-4.1-mini"), "gpt-4-1-mini");
         assert_eq!(
-            normalize_version_separators("claude-3.5-sonnet"),
+            normalize_version_separators("gpt-4.1-mini").as_ref(),
+            "gpt-4-1-mini"
+        );
+        assert_eq!(
+            normalize_version_separators("claude-3.5-sonnet").as_ref(),
             "claude-3-5-sonnet"
         );
         // Multiple separate version numbers (non-consecutive)
         assert_eq!(
-            normalize_version_separators("model-1.2-foo-3.4"),
+            normalize_version_separators("model-1.2-foo-3.4").as_ref(),
             "model-1-2-foo-3-4"
         );
         // No change needed
         assert_eq!(
-            normalize_version_separators("gemini-2-5-flash"),
+            normalize_version_separators("gemini-2-5-flash").as_ref(),
             "gemini-2-5-flash"
         );
         // No digits with dots
-        assert_eq!(normalize_version_separators("gpt-4o"), "gpt-4o");
+        assert_eq!(normalize_version_separators("gpt-4o").as_ref(), "gpt-4o");
     }
 
     #[test]
     fn test_strip_provider_prefix() {
         // With provider prefix
         assert_eq!(
-            strip_provider_prefix("mistral/mistral-large-3"),
+            strip_provider_prefix("mistral/mistral-large-3").as_ref(),
             "mistral-large-3"
         );
         assert_eq!(
-            strip_provider_prefix("qwen/qwen3-vl-8b-instruct"),
+            strip_provider_prefix("qwen/qwen3-vl-8b-instruct").as_ref(),
             "qwen3-vl-8b-instruct"
         );
         // No prefix - returns unchanged
-        assert_eq!(strip_provider_prefix("gpt-4o"), "gpt-4o");
+        assert_eq!(strip_provider_prefix("gpt-4o").as_ref(), "gpt-4o");
         assert_eq!(
-            strip_provider_prefix("claude-3-5-sonnet"),
+            strip_provider_prefix("claude-3-5-sonnet").as_ref(),
             "claude-3-5-sonnet"
         );
     }
@@ -713,21 +859,21 @@ mod tests {
         // -reasoning suffix
         assert_eq!(
             strip_reasoning_suffix("gemini-2-5-flash-reasoning"),
-            Some("gemini-2-5-flash".to_string())
+            Some(Cow::Borrowed("gemini-2-5-flash"))
         );
         assert_eq!(
             strip_reasoning_suffix("claude-3-5-sonnet-reasoning"),
-            Some("claude-3-5-sonnet".to_string())
+            Some(Cow::Borrowed("claude-3-5-sonnet"))
         );
 
         // -non-reasoning suffix
         assert_eq!(
             strip_reasoning_suffix("deepseek-v3-2-non-reasoning"),
-            Some("deepseek-v3-2".to_string())
+            Some(Cow::Borrowed("deepseek-v3-2"))
         );
         assert_eq!(
             strip_reasoning_suffix("o1-non-reasoning"),
-            Some("o1".to_string())
+            Some(Cow::Borrowed("o1"))
         );
 
         // No suffix - returns None
@@ -780,27 +926,36 @@ mod tests {
     fn test_expand_compressed_version() {
         // Compressed version numbers should be expanded
         assert_eq!(
-            expand_compressed_version("claude-35-sonnet"),
+            expand_compressed_version("claude-35-sonnet").as_ref(),
             "claude-3-5-sonnet"
         );
-        assert_eq!(expand_compressed_version("gpt-35-turbo"), "gpt-3-5-turbo");
-        assert_eq!(expand_compressed_version("claude-21"), "claude-2-1");
+        assert_eq!(
+            expand_compressed_version("gpt-35-turbo").as_ref(),
+            "gpt-3-5-turbo"
+        );
+        assert_eq!(
+            expand_compressed_version("claude-21").as_ref(),
+            "claude-2-1"
+        );
 
         // Multiple compressed versions
         assert_eq!(
-            expand_compressed_version("model-35-foo-21"),
+            expand_compressed_version("model-35-foo-21").as_ref(),
             "model-3-5-foo-2-1"
         );
 
         // No change needed - already expanded
         assert_eq!(
-            expand_compressed_version("claude-3-5-sonnet"),
+            expand_compressed_version("claude-3-5-sonnet").as_ref(),
             "claude-3-5-sonnet"
         );
-        assert_eq!(expand_compressed_version("gpt-4o"), "gpt-4o");
+        assert_eq!(expand_compressed_version("gpt-4o").as_ref(), "gpt-4o");
 
         // Single digit after hyphen (not compressed)
-        assert_eq!(expand_compressed_version("gpt-4-turbo"), "gpt-4-turbo");
+        assert_eq!(
+            expand_compressed_version("gpt-4-turbo").as_ref(),
+            "gpt-4-turbo"
+        );
     }
 
     #[test]
@@ -866,35 +1021,35 @@ mod tests {
         // Google - should strip
         assert_eq!(
             strip_effort_suffix_for_provider("gemini-2-5-flash-low", Some("google")),
-            Some("gemini-2-5-flash".to_string())
+            Some(Cow::Borrowed("gemini-2-5-flash"))
         );
         assert_eq!(
             strip_effort_suffix_for_provider("gemini-2-5-flash-medium", Some("Google")),
-            Some("gemini-2-5-flash".to_string())
+            Some(Cow::Borrowed("gemini-2-5-flash"))
         );
         assert_eq!(
             strip_effort_suffix_for_provider("gemini-2-5-flash-high", Some("GOOGLE")),
-            Some("gemini-2-5-flash".to_string())
+            Some(Cow::Borrowed("gemini-2-5-flash"))
         );
         assert_eq!(
             strip_effort_suffix_for_provider("gemini-2-5-flash-minimal", Some("google")),
-            Some("gemini-2-5-flash".to_string())
+            Some(Cow::Borrowed("gemini-2-5-flash"))
         );
 
         // OpenAI - should strip
         assert_eq!(
             strip_effort_suffix_for_provider("gpt-5-low", Some("openai")),
-            Some("gpt-5".to_string())
+            Some(Cow::Borrowed("gpt-5"))
         );
         assert_eq!(
             strip_effort_suffix_for_provider("gpt-5-medium", Some("OpenAI")),
-            Some("gpt-5".to_string())
+            Some(Cow::Borrowed("gpt-5"))
         );
 
         // Anthropic - should strip
         assert_eq!(
             strip_effort_suffix_for_provider("claude-4-high", Some("anthropic")),
-            Some("claude-4".to_string())
+            Some(Cow::Borrowed("claude-4"))
         );
 
         // Mistral - should NOT strip (not in allowed providers)
@@ -968,5 +1123,59 @@ mod tests {
                     .map(|r| r.match_type != MatchType::EffortLevel)
                     .unwrap_or(true)
         );
+    }
+
+    // New tests for case sensitivity fix
+    #[test]
+    fn test_case_insensitive_match() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "openai".to_string(),
+            make_provider("openai", vec![("GPT-4o", make_model("GPT-4o"))]),
+        );
+
+        // AA slug is lowercase but models.dev has mixed case
+        let result = find_match(Some("openai"), "gpt-4o", &providers);
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result.model.id, "GPT-4o");
+        assert_eq!(result.match_type, MatchType::Exact);
+    }
+
+    #[test]
+    fn test_case_insensitive_fuzzy_match() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "anthropic".to_string(),
+            make_provider(
+                "anthropic",
+                vec![(
+                    "Claude-3-5-Sonnet-20241022",
+                    make_model("Claude-3-5-Sonnet-20241022"),
+                )],
+            ),
+        );
+
+        // AA has versioned slug (lowercase), models.dev has mixed case
+        let result = find_match(Some("anthropic"), "claude-3-5-sonnet", &providers);
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result.match_type, MatchType::Fuzzy);
+    }
+
+    #[test]
+    fn test_cow_no_allocation_when_unchanged() {
+        // Test that Cow::Borrowed is returned when no transformation needed
+        let result = normalize_version_separators("gpt-4o");
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        let result = strip_provider_prefix("gpt-4o");
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        let result = expand_compressed_version("claude-3-5-sonnet");
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        let result = strip_version_suffix("gpt-4o");
+        assert!(matches!(result, Cow::Borrowed(_)));
     }
 }

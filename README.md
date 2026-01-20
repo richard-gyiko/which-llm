@@ -220,7 +220,7 @@ which-llm profile default work
 
 ## Agent Skill
 
-The [`which-llm`](https://github.com/richard-gyiko/which-llm) skill helps AI agents select the right model for a task.
+The [`which-llm`](https://github.com/richard-gyiko/which-llm) skill helps AI coding assistants select the right model for a task, following the [Agent Skills](https://agentskills.io) open standard.
 
 Instead of manually querying benchmarks, an agent can load this skill to:
 
@@ -228,12 +228,29 @@ Instead of manually querying benchmarks, an agent can load this skill to:
 2. **Derive requirements** (minimum intelligence/coding scores needed)
 3. **Query and recommend** models that fit your constraints (budget, speed, latency)
 
+### Install Skill
+
 ```bash
-# Install to your skills folder
-npx degit richard-gyiko/which-llm/skills/which-llm skills/which-llm
+# Install for your AI coding tool (project-level)
+which-llm skill install cursor
+which-llm skill install claude
+which-llm skill install opencode
+which-llm skill install codex
+which-llm skill install windsurf
+which-llm skill install copilot
+which-llm skill install antigravity
+
+# Install globally (available in all projects)
+which-llm skill install cursor --global
+
+# List supported tools and paths
+which-llm skill list
+
+# Remove installed skill
+which-llm skill uninstall cursor
 ```
 
-See the [which-llm repository](https://github.com/richard-gyiko/which-llm) for full documentation.
+See the [which-llm repository](https://github.com/richard-gyiko/which-llm) for full skill documentation.
 
 ## Attribution
 

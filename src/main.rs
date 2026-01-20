@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use which_llm::{
-    cli::{CacheCommands, Cli, Commands, ProfileCommands},
+    cli::{CacheCommands, Cli, Commands, ProfileCommands, SkillCommands},
     client::Client,
     commands::{self, llms::CapabilityFilters},
     config::Config,
@@ -42,6 +42,20 @@ async fn run() -> Result<()> {
         }
         Commands::Query { sql, tables } => {
             return commands::query::run(sql.as_deref(), *tables, format);
+        }
+        Commands::Skill { command } => {
+            return match command {
+                SkillCommands::Install {
+                    tool,
+                    global,
+                    force,
+                    dry_run,
+                } => commands::skill::install(tool, *global, *force, *dry_run).await,
+                SkillCommands::Uninstall { tool, global } => {
+                    commands::skill::uninstall(tool, *global)
+                }
+                SkillCommands::List => commands::skill::list(),
+            };
         }
         _ => {}
     }
@@ -112,8 +126,11 @@ async fn run() -> Result<()> {
             commands::media::run_image_to_video(&client, cli.refresh, format, *categories).await?;
             Some("image_to_video")
         }
-        // Profile, Cache, and Query are handled above
-        Commands::Profile { .. } | Commands::Cache { .. } | Commands::Query { .. } => {
+        // Profile, Cache, Query, and Skill are handled above
+        Commands::Profile { .. }
+        | Commands::Cache { .. }
+        | Commands::Query { .. }
+        | Commands::Skill { .. } => {
             unreachable!()
         }
     };

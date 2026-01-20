@@ -28,7 +28,7 @@ pub enum Tool {
 
 impl Tool {
     /// Parse tool name from string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "cursor" => Some(Self::Cursor),
             "claude" => Some(Self::Claude),
@@ -179,7 +179,7 @@ async fn get_skills_zip(force_refresh: bool) -> Result<Vec<u8>> {
 }
 
 /// Extract the which-llm skill directory from the zip to the target path.
-fn extract_skill_to(zip_data: &[u8], target_dir: &PathBuf, dry_run: bool) -> Result<Vec<PathBuf>> {
+fn extract_skill_to(zip_data: &[u8], target_dir: &Path, dry_run: bool) -> Result<Vec<PathBuf>> {
     let cursor = Cursor::new(zip_data);
     let mut archive = ZipArchive::new(cursor)
         .map_err(|e| AppError::Config(format!("Invalid skills.zip: {}", e)))?;
@@ -255,7 +255,7 @@ fn extract_skill_to(zip_data: &[u8], target_dir: &PathBuf, dry_run: bool) -> Res
 
 /// Install skill for a tool.
 pub async fn install(tool_name: &str, global: bool, force: bool, dry_run: bool) -> Result<()> {
-    let tool = Tool::from_str(tool_name).ok_or_else(|| {
+    let tool = Tool::parse(tool_name).ok_or_else(|| {
         AppError::Config(format!(
             "Unknown tool '{}'. Run 'which-llm skill list' to see supported tools.",
             tool_name
@@ -317,7 +317,7 @@ pub async fn install(tool_name: &str, global: bool, force: bool, dry_run: bool) 
 
 /// Uninstall skill for a tool.
 pub fn uninstall(tool_name: &str, global: bool) -> Result<()> {
-    let tool = Tool::from_str(tool_name).ok_or_else(|| {
+    let tool = Tool::parse(tool_name).ok_or_else(|| {
         AppError::Config(format!(
             "Unknown tool '{}'. Run 'which-llm skill list' to see supported tools.",
             tool_name
@@ -354,7 +354,7 @@ pub fn uninstall(tool_name: &str, global: bool) -> Result<()> {
 /// List supported tools and their paths.
 pub fn list() -> Result<()> {
     println!("Supported tools for skill installation:\n");
-    println!("{:<15} {:<40} {}", "TOOL", "PROJECT PATH", "GLOBAL PATH");
+    println!("{:<15} {:<40} GLOBAL PATH", "TOOL", "PROJECT PATH");
     println!("{}", "-".repeat(100));
 
     for tool in Tool::all() {
@@ -390,12 +390,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tool_from_str() {
-        assert_eq!(Tool::from_str("cursor"), Some(Tool::Cursor));
-        assert_eq!(Tool::from_str("CURSOR"), Some(Tool::Cursor));
-        assert_eq!(Tool::from_str("Claude"), Some(Tool::Claude));
-        assert_eq!(Tool::from_str("opencode"), Some(Tool::OpenCode));
-        assert_eq!(Tool::from_str("unknown"), None);
+    fn test_tool_parse() {
+        assert_eq!(Tool::parse("cursor"), Some(Tool::Cursor));
+        assert_eq!(Tool::parse("CURSOR"), Some(Tool::Cursor));
+        assert_eq!(Tool::parse("Claude"), Some(Tool::Claude));
+        assert_eq!(Tool::parse("opencode"), Some(Tool::OpenCode));
+        assert_eq!(Tool::parse("unknown"), None);
     }
 
     #[test]

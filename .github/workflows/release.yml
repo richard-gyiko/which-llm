@@ -17,16 +17,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact: aa
+            artifact: which-llm
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact: aa
+            artifact: which-llm
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact: aa
+            artifact: which-llm
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: aa.exe
+            artifact: which-llm.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: aa-${{ matrix.target }}
+          name: which-llm-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
 
   release:
@@ -112,7 +112,7 @@ jobs:
         run: |
           gh workflow run update-manifest.yml \
             --repo richard-gyiko/scoop-bucket \
-            --field manifest=aa \
+            --field manifest=which-llm \
             --field version=${{ needs.release.outputs.version }} \
             --field hash=${{ needs.release.outputs.hash_windows }}
         env:
@@ -127,7 +127,7 @@ jobs:
         run: |
           gh workflow run update-formula.yml \
             --repo richard-gyiko/homebrew-tap \
-            --field formula=aa \
+            --field formula=which-llm \
             --field version=${{ needs.release.outputs.version }} \
             --field sha256_mac_arm=${{ needs.release.outputs.hash_mac_arm }} \
             --field sha256_mac_x64=${{ needs.release.outputs.hash_mac_x64 }} \

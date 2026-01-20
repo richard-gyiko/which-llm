@@ -146,6 +146,12 @@ pub enum Commands {
         #[command(subcommand)]
         command: ProfileCommands,
     },
+
+    /// Install skills for AI coding tools
+    Skill {
+        #[command(subcommand)]
+        command: SkillCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -183,4 +189,36 @@ pub enum ProfileCommands {
         /// Profile name (uses default if not specified)
         name: Option<String>,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SkillCommands {
+    /// Install skill for an AI coding tool
+    Install {
+        /// Tool name (cursor, claude, codex, opencode, windsurf, copilot, antigravity)
+        tool: String,
+
+        /// Install globally (user-level, available in all projects)
+        #[arg(long, short = 'g')]
+        global: bool,
+
+        /// Overwrite existing skill directory
+        #[arg(long, short = 'f')]
+        force: bool,
+
+        /// Preview without making changes
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Uninstall skill for an AI coding tool
+    Uninstall {
+        /// Tool name (cursor, claude, codex, opencode, windsurf, copilot, antigravity)
+        tool: String,
+
+        /// Uninstall from global location
+        #[arg(long, short = 'g')]
+        global: bool,
+    },
+    /// List supported tools and their paths
+    List,
 }

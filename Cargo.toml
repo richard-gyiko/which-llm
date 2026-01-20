@@ -30,6 +30,9 @@ anyhow = "1"
 # Configuration paths
 dirs = "6"
 
+# Zip file handling
+zip = "2"
+
 # Output formatting
 tabled = "0.18"
 csv = "1.3"

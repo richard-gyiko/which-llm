@@ -1,13 +1,13 @@
 //! Artificial Analysis CLI - Query AI model benchmarks from the terminal.
 
-use aa::{
+use clap::Parser;
+use which_llm::{
     cli::{CacheCommands, Cli, Commands, ProfileCommands},
     client::Client,
     commands::{self, llms::CapabilityFilters},
     config::Config,
     error::Result,
 };
-use clap::Parser;
 
 #[tokio::main]
 async fn main() {
@@ -131,11 +131,11 @@ async fn run() -> Result<()> {
         println!("Data provided by Artificial Analysis (https://artificialanalysis.ai)");
         println!("Capability data from models.dev (https://models.dev)");
 
-        // Show hint about aa query for advanced filtering
+        // Show hint about which-llm query for advanced filtering
         if let Some(table) = show_hint {
             println!();
             println!(
-                "Tip: Use 'aa query \"SELECT * FROM {} WHERE ...\"' for advanced filtering",
+                "Tip: Use 'which-llm query \"SELECT * FROM {} WHERE ...\"' for advanced filtering",
                 table
             );
         }

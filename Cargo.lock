@@ -3,36 +3,6 @@
 version = 4
 
 [[package]]
-name = "aa"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "chrono",
- "clap",
- "comfy-table",
- "csv",
- "dialoguer",
- "dirs",
- "duckdb",
- "hex",
- "once_cell",
- "predicates",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "sqlparser",
- "tabled",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "toml",
- "wiremock",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2995,6 +2965,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12bed680863276c63889429bfd6cab3b99943659923822de1c8a39c49e4d722c"
 dependencies = [
  "rustls-pki-types",
+]
+
+[[package]]
+name = "which-llm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "chrono",
+ "clap",
+ "comfy-table",
+ "csv",
+ "dialoguer",
+ "dirs",
+ "duckdb",
+ "hex",
+ "once_cell",
+ "predicates",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlparser",
+ "tabled",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml",
+ "wiremock",
 ]
 
 [[package]]

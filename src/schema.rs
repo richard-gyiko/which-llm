@@ -42,7 +42,7 @@ impl TableDef {
 // Merged LLM table schema (user-facing)
 pub const LLMS: TableDef = TableDef {
     name: "llms",
-    command: "aa llms",
+    command: "which-llm llms",
     parquet_file: "llms.parquet",
     columns: &[
         // Core identity
@@ -274,35 +274,35 @@ const MEDIA_COLUMNS: &[Column] = &[
 // Individual media table definitions
 pub const TEXT_TO_IMAGE: TableDef = TableDef {
     name: "text_to_image",
-    command: "aa text-to-image",
+    command: "which-llm text-to-image",
     parquet_file: "text_to_image.parquet",
     columns: MEDIA_COLUMNS,
 };
 
 pub const IMAGE_EDITING: TableDef = TableDef {
     name: "image_editing",
-    command: "aa image-editing",
+    command: "which-llm image-editing",
     parquet_file: "image_editing.parquet",
     columns: MEDIA_COLUMNS,
 };
 
 pub const TEXT_TO_SPEECH: TableDef = TableDef {
     name: "text_to_speech",
-    command: "aa text-to-speech",
+    command: "which-llm text-to-speech",
     parquet_file: "text_to_speech.parquet",
     columns: MEDIA_COLUMNS,
 };
 
 pub const TEXT_TO_VIDEO: TableDef = TableDef {
     name: "text_to_video",
-    command: "aa text-to-video",
+    command: "which-llm text-to-video",
     parquet_file: "text_to_video.parquet",
     columns: MEDIA_COLUMNS,
 };
 
 pub const IMAGE_TO_VIDEO: TableDef = TableDef {
     name: "image_to_video",
-    command: "aa image-to-video",
+    command: "which-llm image-to-video",
     parquet_file: "image_to_video.parquet",
     columns: MEDIA_COLUMNS,
 };

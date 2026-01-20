@@ -8,14 +8,14 @@ A command-line interface for querying AI model benchmarks from [Artificial Analy
 
 ```bash
 brew tap richard-gyiko/tap
-brew install aa
+brew install which-llm
 ```
 
 ### Windows (Scoop)
 
 ```powershell
 scoop bucket add richard-gyiko https://github.com/richard-gyiko/scoop-bucket
-scoop install aa
+scoop install which-llm
 ```
 
 ### Manual Download
@@ -24,19 +24,19 @@ Download the latest release from [GitHub Releases](https://github.com/richard-gy
 
 ```bash
 # macOS (Apple Silicon)
-curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/aa-aarch64-apple-darwin.tar.gz
-tar -xzf aa-aarch64-apple-darwin.tar.gz
-sudo mv aa /usr/local/bin/
+curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/which-llm-aarch64-apple-darwin.tar.gz
+tar -xzf which-llm-aarch64-apple-darwin.tar.gz
+sudo mv which-llm /usr/local/bin/
 
 # macOS (Intel)
-curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/aa-x86_64-apple-darwin.tar.gz
-tar -xzf aa-x86_64-apple-darwin.tar.gz
-sudo mv aa /usr/local/bin/
+curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/which-llm-x86_64-apple-darwin.tar.gz
+tar -xzf which-llm-x86_64-apple-darwin.tar.gz
+sudo mv which-llm /usr/local/bin/
 
 # Linux
-curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/aa-x86_64-unknown-linux-gnu.tar.gz
-tar -xzf aa-x86_64-unknown-linux-gnu.tar.gz
-sudo mv aa /usr/local/bin/
+curl -LO https://github.com/richard-gyiko/artificial-analysis-cli/releases/latest/download/which-llm-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf which-llm-x86_64-unknown-linux-gnu.tar.gz
+sudo mv which-llm /usr/local/bin/
 ```
 
 ### From Source
@@ -51,10 +51,10 @@ cargo install --path .
 2. Create a profile with your API key:
 
 ```bash
-aa profile create default --api-key YOUR_API_KEY
+which-llm profile create default --api-key YOUR_API_KEY
 ```
 
-Or set the `AA_API_KEY` environment variable.
+Or set the `ARTIFICIAL_ANALYSIS_API_KEY` environment variable.
 
 ## Usage
 
@@ -62,32 +62,32 @@ Or set the `AA_API_KEY` environment variable.
 
 ```bash
 # List all LLM models (default: markdown table)
-aa llms
+which-llm llms
 
 # Filter by creator and sort by intelligence
-aa llms --creator openai --sort intelligence
+which-llm llms --creator openai --sort intelligence
 
 # Output as JSON for scripting
-aa llms --json
+which-llm llms --json
 
 # Output as CSV
-aa llms --csv
+which-llm llms --csv
 ```
 
 ### Query Media Models
 
 ```bash
 # Text-to-image rankings
-aa text-to-image
+which-llm text-to-image
 
 # With category breakdown
-aa text-to-image --categories
+which-llm text-to-image --categories
 
 # Other media endpoints
-aa image-editing
-aa text-to-speech
-aa text-to-video
-aa image-to-video
+which-llm image-editing
+which-llm text-to-speech
+which-llm text-to-video
+which-llm image-to-video
 ```
 
 ### SQL Queries
@@ -96,37 +96,37 @@ Use SQL to filter, sort, and aggregate cached data with full expressiveness:
 
 ```bash
 # Best coding models under $5/M output price
-aa query "SELECT name, creator, coding, output_price FROM llms WHERE coding > 40 AND output_price < 5 ORDER BY coding DESC"
+which-llm query "SELECT name, creator, coding, output_price FROM llms WHERE coding > 40 AND output_price < 5 ORDER BY coding DESC"
 
 # Fastest models with good intelligence
-aa query "SELECT name, intelligence, tps FROM llms WHERE intelligence > 35 AND tps > 100 ORDER BY tps DESC LIMIT 10"
+which-llm query "SELECT name, intelligence, tps FROM llms WHERE intelligence > 35 AND tps > 100 ORDER BY tps DESC LIMIT 10"
 
 # Compare creators by average intelligence
-aa query "SELECT creator, COUNT(*) as models, ROUND(AVG(intelligence), 1) as avg_intel FROM llms WHERE intelligence IS NOT NULL GROUP BY creator ORDER BY avg_intel DESC"
+which-llm query "SELECT creator, COUNT(*) as models, ROUND(AVG(intelligence), 1) as avg_intel FROM llms WHERE intelligence IS NOT NULL GROUP BY creator ORDER BY avg_intel DESC"
 
 # Top image generation models
-aa query "SELECT name, creator, elo, rank FROM text_to_image WHERE elo > 1200 ORDER BY elo DESC"
+which-llm query "SELECT name, creator, elo, rank FROM text_to_image WHERE elo > 1200 ORDER BY elo DESC"
 
 # Models with tool calling and large context windows
-aa query "SELECT name, creator, context_window, tool_call FROM llms WHERE tool_call = true AND context_window > 100000 ORDER BY context_window DESC"
+which-llm query "SELECT name, creator, context_window, tool_call FROM llms WHERE tool_call = true AND context_window > 100000 ORDER BY context_window DESC"
 
 # Reasoning models with their capabilities
-aa query "SELECT name, creator, intelligence, reasoning, context_window FROM llms WHERE reasoning = true ORDER BY intelligence DESC LIMIT 10"
+which-llm query "SELECT name, creator, intelligence, reasoning, context_window FROM llms WHERE reasoning = true ORDER BY intelligence DESC LIMIT 10"
 
 # List available tables and their schemas
-aa query --tables
+which-llm query --tables
 ```
 
 #### Available Tables
 
 | Table | Source Command |
 |-------|----------------|
-| `llms` | `aa llms` |
-| `text_to_image` | `aa text-to-image` |
-| `image_editing` | `aa image-editing` |
-| `text_to_speech` | `aa text-to-speech` |
-| `text_to_video` | `aa text-to-video` |
-| `image_to_video` | `aa image-to-video` |
+| `llms` | `which-llm llms` |
+| `text_to_image` | `which-llm text-to-image` |
+| `image_editing` | `which-llm image-editing` |
+| `text_to_speech` | `which-llm text-to-speech` |
+| `text_to_video` | `which-llm text-to-video` |
+| `image_to_video` | `which-llm image-to-video` |
 
 #### LLMs Table Columns
 
@@ -195,16 +195,16 @@ All media tables (`text_to_image`, `image_editing`, etc.) share this schema:
 
 ```bash
 # Check API quota
-aa quota
+which-llm quota
 
 # Manage cache
-aa cache status
-aa cache clear
+which-llm cache status
+which-llm cache clear
 
 # Manage profiles
-aa profile list
-aa profile create work --api-key KEY
-aa profile default work
+which-llm profile list
+which-llm profile create work --api-key KEY
+which-llm profile default work
 ```
 
 ### Output Formats

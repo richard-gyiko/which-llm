@@ -1,5 +1,5 @@
 [package]
-name = "aa"
+name = "which-llm"
 version = "0.1.0"
 edition = "2021"
 description = "CLI for querying AI model benchmarks from Artificial Analysis"

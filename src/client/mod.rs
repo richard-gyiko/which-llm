@@ -10,6 +10,7 @@ use crate::sources::artificial_analysis::AaClient;
 use crate::sources::models_dev::models::{flatten_response, ModelsDevResponse, ModelsDevRow};
 use crate::sources::models_dev::ModelsDevClient;
 use chrono::{Duration, Utc};
+use duckdb::Connection;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -112,14 +113,26 @@ impl Client {
 
     /// Load merged LLM models from parquet cache.
     fn load_merged_cache(&self, path: &Path) -> Result<Vec<LlmModel>> {
-        use duckdb::Connection;
-
         let conn = Connection::open_in_memory()
             .map_err(|e| crate::error::AppError::Cache(format!("DuckDB error: {}", e)))?;
 
         let path_str = path.to_string_lossy();
+        // Use explicit column names to be resilient to schema changes
+        let sql = format!(
+            r#"SELECT
+                id, name, slug, creator, creator_slug, release_date,
+                intelligence, coding, math, mmlu_pro, gpqa, hle,
+                livecodebench, scicode, math_500, aime,
+                input_price, output_price, price, tps, latency,
+                reasoning, tool_call, structured_output, attachment, temperature,
+                context_window, max_input_tokens, max_output_tokens,
+                input_modalities, output_modalities,
+                knowledge_cutoff, open_weights, last_updated, models_dev_matched
+            FROM read_parquet('{}')"#,
+            path_str
+        );
         let mut stmt = conn
-            .prepare(&format!("SELECT * FROM read_parquet('{}')", path_str))
+            .prepare(&sql)
             .map_err(|e| crate::error::AppError::Cache(format!("DuckDB error: {}", e)))?;
 
         let models: Vec<LlmModel> = stmt

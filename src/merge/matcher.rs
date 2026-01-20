@@ -11,6 +11,17 @@ static RE_DATE_DASHED: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"-\d{4}-\d{2}-\d{2}$").unwrap());
 static RE_VERSION: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"-v\d+(\.\d+)*$").unwrap());
 
+/// Provider name mapping from AA to models.dev (pre-computed).
+/// AA uses different provider slugs than models.dev in some cases.
+static PROVIDER_MAPPING: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert("meta", "llama");
+    map.insert("meta-llama", "llama");
+    map.insert("x-ai", "xai");
+    map.insert("x.ai", "xai");
+    map
+});
+
 /// Result of a model match attempt.
 #[derive(Debug, Clone)]
 pub struct MatchResult<'a> {
@@ -30,22 +41,10 @@ pub enum MatchType {
     NormalizedProvider,
 }
 
-/// Provider name mapping from AA to models.dev.
-/// AA uses different provider slugs than models.dev in some cases.
-fn provider_mapping() -> HashMap<&'static str, &'static str> {
-    let mut map = HashMap::new();
-    map.insert("meta", "llama");
-    map.insert("meta-llama", "llama");
-    map.insert("x-ai", "xai");
-    map.insert("x.ai", "xai");
-    map
-}
-
 /// Normalize a provider slug to match models.dev conventions.
 pub fn normalize_provider(slug: &str) -> String {
     let lower = slug.to_lowercase();
-    let mapping = provider_mapping();
-    mapping
+    PROVIDER_MAPPING
         .get(lower.as_str())
         .unwrap_or(&lower.as_str())
         .to_string()

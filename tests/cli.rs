@@ -4,21 +4,21 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 fn cmd() -> Command {
-    Command::cargo_bin("aa").unwrap()
+    Command::cargo_bin("which-llm").unwrap()
 }
 
 /// Set up temp environment for config isolation (cross-platform)
 fn cmd_with_temp_config(temp: &tempfile::TempDir) -> Command {
     let mut cmd = cmd();
-    let config_dir = temp.path().join("config").join("aa");
-    let cache_dir = temp.path().join("cache").join("aa");
+    let config_dir = temp.path().join("config").join("which-llm");
+    let cache_dir = temp.path().join("cache").join("which-llm");
 
-    // Use AA_CONFIG_DIR and AA_CACHE_DIR for reliable isolation
-    cmd.env("AA_CONFIG_DIR", &config_dir);
-    cmd.env("AA_CACHE_DIR", &cache_dir);
+    // Use WHICH_LLM_CONFIG_DIR and WHICH_LLM_CACHE_DIR for reliable isolation
+    cmd.env("WHICH_LLM_CONFIG_DIR", &config_dir);
+    cmd.env("WHICH_LLM_CACHE_DIR", &cache_dir);
 
     // Remove any existing API key
-    cmd.env_remove("AA_API_KEY");
+    cmd.env_remove("ARTIFICIAL_ANALYSIS_API_KEY");
     cmd
 }
 
@@ -78,7 +78,7 @@ fn test_llms_requires_api_key() {
 fn test_quota_no_data() {
     let temp = tempfile::tempdir().unwrap();
     cmd_with_temp_config(&temp)
-        .env("AA_API_KEY", "test_key")
+        .env("ARTIFICIAL_ANALYSIS_API_KEY", "test_key")
         .arg("quota")
         .assert()
         .success()
@@ -140,5 +140,5 @@ fn test_query_missing_table() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("not found"))
-        .stderr(predicate::str::contains("aa llms"));
+        .stderr(predicate::str::contains("which-llm llms"));
 }

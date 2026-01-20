@@ -54,15 +54,15 @@ impl Config {
     }
 
     /// Get the configuration file path.
-    /// Respects AA_CONFIG_DIR environment variable for testing/portability.
+    /// Respects WHICH_LLM_CONFIG_DIR environment variable for testing/portability.
     pub fn config_path() -> Result<PathBuf> {
         // Allow override via environment variable (useful for testing)
-        if let Ok(config_dir) = std::env::var("AA_CONFIG_DIR") {
+        if let Ok(config_dir) = std::env::var("WHICH_LLM_CONFIG_DIR") {
             return Ok(PathBuf::from(config_dir).join("config.toml"));
         }
 
         dirs::config_dir()
-            .map(|p| p.join("aa").join("config.toml"))
+            .map(|p| p.join("which-llm").join("config.toml"))
             .ok_or_else(|| AppError::Config("Could not determine config directory".into()))
     }
 
@@ -87,10 +87,10 @@ impl Config {
     }
 
     /// Get the API key for the given profile, or the default profile.
-    /// Environment variable AA_API_KEY takes precedence.
+    /// Environment variable ARTIFICIAL_ANALYSIS_API_KEY takes precedence.
     pub fn get_api_key(&self, profile_name: Option<&str>) -> Result<String> {
         // Check environment variable first
-        if let Ok(key) = std::env::var("AA_API_KEY") {
+        if let Ok(key) = std::env::var("ARTIFICIAL_ANALYSIS_API_KEY") {
             return Ok(key);
         }
 

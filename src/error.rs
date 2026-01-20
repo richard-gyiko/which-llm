@@ -8,7 +8,7 @@ pub enum AppError {
     #[error("Configuration error: {0}")]
     Config(String),
 
-    #[error("Invalid API key. Run 'aa profile create' to configure.")]
+    #[error("Invalid API key. Run 'which-llm profile create' to configure.")]
     InvalidApiKey,
 
     #[error("Rate limit exceeded. Free tier allows 1,000 requests/day. Reset: {0}")]
@@ -27,7 +27,7 @@ pub enum AppError {
     ProfileNotFound(String),
 
     #[error(
-        "No API key configured. Set AA_API_KEY environment variable or run 'aa profile create'."
+        "No API key configured. Set ARTIFICIAL_ANALYSIS_API_KEY environment variable or run 'which-llm profile create'."
     )]
     NoApiKey,
 

@@ -50,13 +50,13 @@ pub struct Cache {
 
 impl Cache {
     /// Create a new cache with default settings.
-    /// Respects AA_CACHE_DIR environment variable for testing/portability.
+    /// Respects WHICH_LLM_CACHE_DIR environment variable for testing/portability.
     pub fn new() -> Result<Self> {
-        let base_dir = if let Ok(cache_dir) = std::env::var("AA_CACHE_DIR") {
+        let base_dir = if let Ok(cache_dir) = std::env::var("WHICH_LLM_CACHE_DIR") {
             PathBuf::from(cache_dir)
         } else {
             dirs::cache_dir()
-                .map(|p| p.join("aa"))
+                .map(|p| p.join("which-llm"))
                 .ok_or_else(|| AppError::Cache("Could not determine cache directory".into()))?
         };
 

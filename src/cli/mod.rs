@@ -3,9 +3,9 @@
 use crate::output::OutputFormat;
 use clap::{Parser, Subcommand};
 
-/// Artificial Analysis CLI - Query AI model benchmarks from the terminal.
+/// which-llm - Query AI model benchmarks from the terminal.
 #[derive(Parser, Debug)]
-#[command(name = "aa", version, about, long_about = None)]
+#[command(name = "which-llm", version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,

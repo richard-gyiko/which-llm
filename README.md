@@ -1,6 +1,6 @@
 # which-llm
 
-A command-line interface for querying AI model benchmarks from [Artificial Analysis](https://artificialanalysis.ai), enriched with capability metadata from [models.dev](https://models.dev).
+A command-line interface for querying AI model benchmarks from [Artificial Analysis](https://artificialanalysis.ai), enriched with capability metadata from [models.dev](https://models.dev). Helps you decide which LLM to use for your task.
 
 ## Installation
 

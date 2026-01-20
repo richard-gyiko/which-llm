@@ -2,7 +2,7 @@
 
 use crate::error::{AppError, Result};
 use std::fs;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::path::{Component, Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use zip::ZipArchive;
@@ -152,7 +152,7 @@ async fn download_skills_zip() -> Result<Vec<u8>> {
         .await
         .map_err(|e| AppError::Network(format!("Failed to read skills.zip: {}", e)))?;
 
-    Ok(bytes.to_vec())
+    Ok(bytes.into())
 }
 
 /// Get skills.zip data, using cache if available and fresh.
@@ -233,11 +233,11 @@ fn extract_skill_to(zip_data: &[u8], target_dir: &PathBuf, dry_run: bool) -> Res
         }
 
         // Extract file
-        let mut content = Vec::new();
-        file.read_to_end(&mut content)
-            .map_err(|e| AppError::Config(format!("Failed to read {}: {}", file_path, e)))?;
-
-        fs::write(&target_path, &content)?;
+        let mut out_file = fs::File::create(&target_path).map_err(|e| {
+            AppError::Config(format!("Failed to create {}: {}", target_path.display(), e))
+        })?;
+        std::io::copy(&mut file, &mut out_file)
+            .map_err(|e| AppError::Config(format!("Failed to extract {}: {}", file_path, e)))?;
 
         // Preserve Unix file permissions if available
         #[cfg(unix)]
@@ -277,7 +277,7 @@ pub async fn install(tool_name: &str, global: bool, force: bool, dry_run: bool) 
     }
 
     // Get skills.zip (from cache or download)
-    let zip_data = get_skills_zip(false).await?;
+    let zip_data = get_skills_zip(force).await?;
 
     if dry_run {
         println!("Dry run: would install skill to {}", target_dir.display());

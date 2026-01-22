@@ -84,6 +84,10 @@ which-llm skill install cursor --global
 
 Now just ask your AI assistant: *"Which LLM should I use for [your task]?"*
 
+> **Tip:** Most AI assistants will automatically load the skill when you mention "which llm" in your question—no need to explicitly tell it to load the skill.
+
+> **Experimental:** The skill is under active development. Recommendations and output format may change as we refine the task classification and benchmark interpretation.
+
 The skill follows the [Agent Skills](https://agentskills.io) open standard. See the [full skill documentation](skills/which-llm/SKILL.md) for details on how it classifies tasks and selects models.
 
 ## How It Works
@@ -101,70 +105,32 @@ Data sources:
 
 ## Example
 
-**You:** *"I need to build an agent that calls external APIs and processes the results. Budget is important—we'll be making lots of requests."*
+**You:** *"I'm building a feature that summarizes long Slack threads so users can catch up quickly. Threads can be pretty long, like 200+ messages. Which LLM should I use?"*
 
 **Assistant (with skill loaded):**
 
-> ### Task Analysis
-> - **Type:** Tool-using (API calls, function execution)
-> - **Requirements:** `tool_call = true`, good coding score, cost-efficient
+> ## Task Classification
+> - **Skill Type:** Transformational (summarization)
+> - **Key Constraints:** Large context window (200+ messages)
+> - **Priority:** Balanced (quality + cost + speed matter equally)
 > 
-> ### Recommendations
+> ## Recommendations
 > 
-> | Role | Model | Price | Why |
-> |------|-------|-------|-----|
-> | **Primary** | GPT-4o-mini | $0.60/M | Reliable tool calling, lowest cost in class |
-> | **Fallback** | Claude 3.5 Sonnet | $9.00/M | Higher reasoning for complex orchestration |
+> ### Primary: gpt-oss-20B ($0.10/M)
+> - Intelligence: 24.7 | Context: 131k tokens | Throughput: 305 tps
+> - Why: Excellent cost-capability ratio. 131k context easily handles 200+ messages.
 > 
-> ### Cost Estimate
-> With 80% primary / 20% fallback: **$2.28/M tokens** (75% savings vs always using fallback)
+> ### Fallback: MiMo-V2-Flash ($0.15/M)
+> - Intelligence: 30-39 | Context: 256k tokens
+> - Use if: Primary struggles with nuanced summaries or threads exceed 300+ messages
 > 
-> ### Alternatives Considered
-> - *Gemini 1.5 Flash* — Cheaper but less reliable tool calling in practice
-> - *DeepSeek V3* — Great value but higher latency for real-time use
+> ## Cost Estimate
+> - **Cascade (70/30 split):** $0.115/M tokens
+> - **Savings vs always using fallback:** 23%
+>
+> **Validation step:** Before deploying, test both models on 5-10 representative Slack threads from your workspace.
 
-<details>
-<summary>More examples</summary>
-
----
-
-**You:** *"Which model should I use for summarizing customer support tickets? We process ~10k tickets/day."*
-
-**Assistant:**
-
-> ### Task Analysis
-> - **Type:** Transformational (summarization)
-> - **Requirements:** Basic intelligence, high throughput, very low cost
-> 
-> ### Recommendations
-> 
-> | Role | Model | Price | Why |
-> |------|-------|-------|-----|
-> | **Primary** | Gemini 1.5 Flash | $0.15/M | Fastest, cheapest for simple transforms |
-> | **Fallback** | GPT-4o-mini | $0.60/M | Better quality for edge cases |
-> 
-> At 10k tickets/day (~2M tokens), estimated cost: **$9-12/day**
-
----
-
-**You:** *"I need a model for a coding assistant that helps with refactoring. Must support 100k+ context for large files."*
-
-**Assistant:**
-
-> ### Task Analysis
-> - **Type:** Analytical + Tool-using (code understanding, refactoring)
-> - **Requirements:** High coding score, `context_window >= 100k`, `structured_output = true`
-> 
-> ### Recommendations
-> 
-> | Role | Model | Price | Context | Why |
-> |------|-------|-------|---------|-----|
-> | **Primary** | Claude 3.5 Sonnet | $9.00/M | 200k | Best coding benchmarks, excellent at refactoring |
-> | **Fallback** | GPT-4o | $10.00/M | 128k | Strong alternative, slightly different style |
-> 
-> Both models score 45+ on coding index. For cost savings on simpler refactors, consider GPT-4o-mini as a pre-filter.
-
-</details>
+[View full transcript](examples/opencode_haiku_45_transcript.md) — shows the complete flow including CLI queries and scoring.
 
 ## CLI Reference
 

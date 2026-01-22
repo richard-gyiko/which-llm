@@ -1,10 +1,10 @@
 [package]
 name = "which-llm"
-version = "0.1.0"
+version = "0.5.0"
 edition = "2021"
 description = "CLI for querying AI model benchmarks from Artificial Analysis"
 license = "MIT"
-repository = "https://github.com/richard-gyiko/which-llm-cli"
+repository = "https://github.com/richard-gyiko/which-llm"
 keywords = ["ai", "llm", "benchmark", "cli"]
 categories = ["command-line-utilities"]
 

@@ -141,14 +141,16 @@ impl HostedDataClient {
 
     /// Load media models from a parquet file.
     fn load_media_from_parquet(&self, path: &Path) -> Result<Vec<MediaModel>> {
+        use crate::models::media::MediaCreator;
+
         let conn = Connection::open_in_memory()
             .map_err(|e| AppError::Cache(format!("DuckDB error: {}", e)))?;
 
         let path_str = path.to_string_lossy();
         let sql = format!(
             r#"SELECT
-                id, name, slug, creator, creator_slug,
-                elo, rank, appearances, release_date
+                id, name, slug, creator,
+                elo, rank, release_date
             FROM read_parquet('{}')"#,
             path_str
         );
@@ -158,16 +160,24 @@ impl HostedDataClient {
 
         let models: Vec<MediaModel> = stmt
             .query_map([], |row| {
+                let creator_name: String = row.get(3)?;
                 Ok(MediaModel {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     slug: row.get(2)?,
-                    creator: row.get(3)?,
-                    creator_slug: row.get(4)?,
-                    elo: row.get(5)?,
-                    rank: row.get(6)?,
-                    appearances: row.get(7)?,
-                    release_date: row.get(8)?,
+                    model_creator: MediaCreator {
+                        id: String::new(),
+                        name: creator_name,
+                        slug: None,
+                        extra: serde_json::Value::Null,
+                    },
+                    elo: row.get(4)?,
+                    rank: row.get::<_, Option<i32>>(5)?.map(|r| r as u32),
+                    ci95: None,
+                    appearances: None,
+                    release_date: row.get(6)?,
+                    categories: None,
+                    extra: serde_json::Value::Null,
                 })
             })
             .map_err(|e| AppError::Cache(format!("DuckDB error: {}", e)))?

@@ -192,7 +192,8 @@ fn extract_skill_to(zip_data: &[u8], target_dir: &Path, dry_run: bool) -> Result
             .by_index(i)
             .map_err(|e| AppError::Config(format!("Failed to read zip entry: {}", e)))?;
 
-        let file_path = file.name().to_string();
+        // Normalize path separators (Windows zips may use backslashes)
+        let file_path = file.name().replace('\\', "/");
 
         // Skip files not under which-llm/ directory
         if !file_path.starts_with("which-llm/") {

@@ -8,24 +8,18 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Speed up builds
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "ubuntu-latest"
-      - run: cargo check --all-features
-
+  # Fast checks that don't need full compilation
   fmt:
     name: Format
     runs-on: ubuntu-latest
@@ -36,8 +30,9 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all -- --check
 
-  clippy:
-    name: Clippy
+  # Main CI job - combines check, clippy, and test to share build cache
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,15 +41,23 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "ubuntu-latest"
-      - run: cargo clippy --all-features -- -D warnings
+          shared-key: "ci-ubuntu"
+          # Cache the target directory
+          cache-targets: true
+      - name: Clippy
+        run: cargo clippy --all-features -- -D warnings
+      - name: Test
+        run: cargo test --all-features
 
-  test:
-    name: Test
+  # Cross-platform tests only on main branch pushes
+  test-platforms:
+    name: Test (${{ matrix.os }})
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -63,10 +66,13 @@ jobs:
           shared-key: ${{ matrix.os }}
       - run: cargo test --all-features
 
-  build:
-    name: Build
+  # Release build verification only on main
+  build-release:
+    name: Build Release (${{ matrix.os }})
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
@@ -74,5 +80,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ matrix.os }}
+          shared-key: "release-${{ matrix.os }}"
       - run: cargo build --release

@@ -76,6 +76,7 @@ fn test_llms_api_mode_requires_api_key() {
 }
 
 #[test]
+#[ignore] // Requires network access to GitHub releases, can be flaky in CI
 fn test_llms_hosted_data_works() {
     // When hosted data is available, CLI should fetch from hosted source successfully
     let temp = tempfile::tempdir().unwrap();

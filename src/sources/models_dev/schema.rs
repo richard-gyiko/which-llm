@@ -7,7 +7,7 @@ use crate::schema::{Column, TableDef};
 /// capabilities, context limits, and provider-specific pricing.
 pub const MODELS: TableDef = TableDef {
     name: "models",
-    command: "which-llm query 'SELECT * FROM models'",
+    command: "which-llm refresh",
     parquet_file: "models.parquet",
     columns: &[
         // Provider identity

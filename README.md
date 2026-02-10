@@ -57,11 +57,14 @@ cargo install --path .
 **No API key required!** The CLI fetches pre-built benchmark data from GitHub Releases, updated daily.
 
 ```bash
-# List all LLM models
-which-llm llms
+# Refresh data (run once to populate cache)
+which-llm refresh
 
-# Filter by creator
-which-llm llms --creator openai
+# Query models using SQL
+which-llm query "SELECT name, intelligence, coding, price FROM benchmarks LIMIT 10"
+
+# List available tables
+which-llm tables
 
 # Check data source info
 which-llm info
@@ -85,7 +88,7 @@ Or set the `ARTIFICIAL_ANALYSIS_API_KEY` environment variable.
 Then use the `--use-api` flag to fetch directly from the API:
 
 ```bash
-which-llm llms --use-api
+which-llm refresh --use-api
 ```
 
 </details>
@@ -160,20 +163,7 @@ Data sources:
 
 For power users, scripting, or debugging, you can query the data directly.
 
-### Basic Queries
-
-```bash
-# List all LLM models
-which-llm llms
-
-# Filter and sort
-which-llm llms --creator openai --sort intelligence
-
-# Output formats: --json, --csv, --table, --plain
-which-llm llms --json
-```
-
-### SQL Queries
+### SQL Queries (Primary Interface)
 
 Use full SQL expressiveness on the cached benchmark data:
 
@@ -185,7 +175,10 @@ which-llm query "SELECT name, creator, coding, output_price FROM benchmarks WHER
 which-llm query "SELECT model_name, provider_name, context_window, tool_call FROM models WHERE tool_call = true AND context_window > 100000"
 
 # List available tables
-which-llm query --tables
+which-llm tables
+
+# Show schema for a specific table
+which-llm tables benchmarks
 ```
 
 <details>
@@ -271,8 +264,8 @@ which-llm cost "claude-4.5" --input 1.5M --output 750k
 ### Other Commands
 
 ```bash
-# Force refresh data from GitHub
-which-llm llms --refresh
+# Refresh data from sources
+which-llm refresh
 
 # View data source and attribution info
 which-llm info
@@ -305,8 +298,8 @@ The CLI uses pre-built benchmark data hosted on GitHub Releases, updated daily v
 - **No API key required** for basic usage
 - Data is typically **less than 24 hours old**
 - Use `which-llm info` to see when data was last updated
-- Use `--refresh` to force a fresh download from GitHub
-- Use `--use-api` with an API key for real-time data
+- Use `which-llm refresh` to fetch fresh data from sources
+- Use `which-llm refresh --use-api` with an API key for real-time data
 
 ## License
 

@@ -189,6 +189,12 @@ impl HostedDataClient {
             .await?;
         self.load_media_from_parquet(&parquet_path)
     }
+
+    /// Refresh models.dev data.
+    pub async fn refresh_models(&self) -> Result<()> {
+        let _ = self.remote.ensure_parquet("models", true).await?;
+        Ok(())
+    }
 }
 
 /// Unified client that fetches from both AA and models.dev APIs.

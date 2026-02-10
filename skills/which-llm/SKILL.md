@@ -32,7 +32,7 @@ which-llm --version
 which-llm cache status
 
 # 3. If stale or missing, refresh data
-which-llm llms --refresh
+which-llm refresh
 ```
 
 **If CLI is unavailable:** See [references/INSTALL.md](references/INSTALL.md) for installation, or use [references/FALLBACK.md](references/FALLBACK.md) for heuristic recommendations without the CLI.

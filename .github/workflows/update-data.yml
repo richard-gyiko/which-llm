@@ -73,21 +73,14 @@ jobs:
             CLI="/tmp/which-llm"
           fi
           
-          # Fetch critical data type (llms) - fail workflow if this fails
-          $CLI llms --use-api --quiet
+          # Fetch all data using the refresh command with API access
+          $CLI refresh --use-api --quiet
           
-          # Fetch non-critical data types - warn but continue on error
-          $CLI text-to-image --use-api --quiet || echo "Warning: failed to fetch text-to-image data"
-          $CLI image-editing --use-api --quiet || echo "Warning: failed to fetch image-editing data"
-          $CLI text-to-speech --use-api --quiet || echo "Warning: failed to fetch text-to-speech data"
-          $CLI text-to-video --use-api --quiet || echo "Warning: failed to fetch text-to-video data"
-          $CLI image-to-video --use-api --quiet || echo "Warning: failed to fetch image-to-video data"
-          
-          # Verify at least llms.parquet exists
+          # Verify at least benchmarks.parquet exists
           echo "Generated parquet files:"
-          ls -la "$WHICH_LLM_CACHE_DIR"/*.parquet
-          if [ ! -f "$WHICH_LLM_CACHE_DIR/llms.parquet" ]; then
-            echo "Error: llms.parquet not found"
+          ls -la "$WHICH_LLM_CACHE_DIR"/*.parquet || true
+          if [ ! -f "$WHICH_LLM_CACHE_DIR/benchmarks.parquet" ]; then
+            echo "Error: benchmarks.parquet not found"
             exit 1
           fi
       
@@ -179,7 +172,8 @@ jobs:
           The which-llm CLI automatically fetches this data. No API key required!
 
           \`\`\`bash
-          which-llm llms
+          which-llm refresh
+          which-llm query \"SELECT * FROM benchmarks LIMIT 10\"
           \`\`\`
 
           ## Attribution
@@ -204,7 +198,8 @@ jobs:
           The which-llm CLI automatically fetches this data. No API key required!
 
           \`\`\`bash
-          which-llm llms
+          which-llm refresh
+          which-llm query \"SELECT * FROM benchmarks LIMIT 10\"
           \`\`\`
 
           ## Attribution
